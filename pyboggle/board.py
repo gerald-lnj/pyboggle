@@ -75,7 +75,8 @@ class BoggleBoard:
             raise ValueError(f"Invalid tile set {tiles}.")
         self.dice: List[List[Dice]] = self._create_dice()
         self.adjacency = self._create_adjacency_graph()
-        self.word_tree = WordTree("pyboggle/word_lists/csw15.txt")
+        filter = "".join(d.face for d in itertools.chain(*self.dice))
+        self.word_tree = WordTree("pyboggle/word_lists/csw15.txt", filter=filter)
 
     def _create_dice(self) -> List[List[Dice]]:
         """
@@ -243,7 +244,6 @@ class BoggleBoard:
         """Check if word is possible in board, and exists in word list"""
         if self._is_valid_path(word) and self.word_tree.exists(word):
             return self.scorer(word)
-
 
 
 if __name__ == "main":

@@ -1,26 +1,27 @@
-from functools import cache, lru_cache
+from functools import lru_cache
 from typing import Optional, Sequence
 
 from networkx import prefix_tree
 
 
-def _file_lines_iterator(wordlist_filepath: str):
+def _file_lines_iterator(wordlist_filepath: str, filter: str = ""):
     with open(wordlist_filepath) as fobj:
         for line in fobj:
-            if line != "\n":
-                yield line.strip()
+            line = line.strip()
+            if line:
+                if not filter or all(char in filter for char in line):
+                    yield line
 
 
-@cache
-def prefix_tree_from_filepath(wordlist_filepath: str):
-    return prefix_tree(_file_lines_iterator(wordlist_filepath))
+def prefix_tree_from_filepath(wordlist_filepath: str, filter: str = ""):
+    return prefix_tree(_file_lines_iterator(wordlist_filepath, filter))
 
 
 class WordTree:
     """A representation of a word list as a prefix tree"""
 
-    def __init__(self, wordlist_filepath: str) -> None:
-        self.tree = prefix_tree_from_filepath(wordlist_filepath)
+    def __init__(self, wordlist_filepath: str, filter: str = "") -> None:
+        self.tree = prefix_tree_from_filepath(wordlist_filepath, filter)
 
         # cache the method calls
         # https://rednafi.github.io/reflections/dont-wrap-instance-methods-with-functoolslru_cache-decorator-in-python.html
