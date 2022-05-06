@@ -1,3 +1,4 @@
+import curses
 import itertools
 import random
 from dataclasses import dataclass
@@ -191,11 +192,6 @@ class BoggleBoard:
         path_permutations = list(itertools.product(*matching_dice))
         return any(is_simple_path(self.adjacency, path) for path in path_permutations)
 
-    def print(self):
-        """Prints board in a human readable representation"""
-        for dice_row in a.dice:
-            print(" ".join(dice.face.ljust(2) for dice in dice_row))
-
     def solver(self) -> Set[str]:
         """
         Get list of all words that exist in board.
@@ -245,6 +241,58 @@ class BoggleBoard:
         """Check if word is possible in board, and exists in word list"""
         if self._is_valid_path(word) and self.word_tree.exists(word):
             return self.scorer(word)
+
+    def _start_game(self, stdscr: curses.window):
+        def update_display(
+            stdscr: curses.window, words: List[str], points: int, msg: str
+        ):
+            stdscr.clear()
+            stdscr.addstr(str(self))
+            stdscr.addstr(f"\n\nCurrent words: {', '.join(words)}")
+            stdscr.addstr(f"\nCurrent points: {points}")
+            stdscr.addstr(f"\n{msg}")
+            stdscr.refresh()
+
+        current_points = 0
+        current_words: List[str] = []
+        input: List[str] = []
+        msg = ""
+
+        while True:
+            update_display(stdscr, current_words, current_points, msg)
+            msg = ""
+            c = stdscr.getkey()
+            if c == "\x1b":  # escape key
+                curses.endwin()
+                stdscr.erase()
+                return current_words, current_points
+            elif c == "\n":  # enter
+                word = "".join(input)
+                score = self.attempt_word(word)
+                if score:
+                    if word not in current_words:
+                        current_words.append(word)
+                        current_points += score
+                        msg = f"{word} was worth {score} points"
+                    else:
+                        msg = f"You have already guessed {word}"
+                else:
+                    msg = f"{word} is not a valid word"
+                input = []
+
+            else:
+                if c.isalpha():
+                    input.append(c.upper())
+
+    def start_game(self):
+        words, points = curses.wrapper(self._start_game)
+        print(f"Guessed words: {', '.join(words)}")
+        print(f"Total points: {points}")
+
+    def __str__(self) -> str:
+        return "\n".join(
+            " ".join(dice.face.ljust(2) for dice in dice_row) for dice_row in self.dice
+        )
 
 
 if __name__ == "main":
