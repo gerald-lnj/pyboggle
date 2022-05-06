@@ -5,7 +5,8 @@ from functools import cached_property
 from typing import List, Optional, Set, Tuple, Union
 
 from networkx import Graph, is_simple_path
-from words import WordTree
+
+from .words import WordTree
 
 CLASSIC_TILES = [
     ("A", "A", "C", "I", "O", "T"),
