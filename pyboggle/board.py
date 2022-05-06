@@ -1,61 +1,61 @@
 import itertools
 import random
-from typing import List, Optional
+from dataclasses import dataclass
+from functools import cached_property
+from typing import List, Optional, Set, Tuple
 
 from networkx import Graph
 from words import WordTree
 
 CLASSIC_TILES = [
-    ["A", "A", "C", "I", "O", "T"],
-    ["A", "B", "I", "L", "T", "Y"],
-    ["A", "B", "J", "M", "O", "Qu"],
-    ["A", "C", "D", "E", "M", "P"],
-    ["A", "C", "E", "L", "R", "S"],
-    ["A", "D", "E", "N", "V", "Z"],
-    ["A", "H", "M", "O", "R", "S"],
-    ["B", "I", "F", "O", "R", "X"],
-    ["D", "E", "N", "O", "S", "W"],
-    ["D", "K", "N", "O", "T", "U"],
-    ["E", "E", "F", "H", "I", "Y"],
-    ["E", "G", "K", "L", "U", "Y"],
-    ["E", "G", "I", "N", "T", "V"],
-    ["E", "H", "I", "N", "P", "S"],
-    ["E", "L", "P", "S", "T", "U"],
-    ["G", "I", "L", "R", "U", "W"],
+    ("A", "A", "C", "I", "O", "T"),
+    ("A", "B", "I", "L", "T", "Y"),
+    ("A", "B", "J", "M", "O", "Qu"),
+    ("A", "C", "D", "E", "M", "P"),
+    ("A", "C", "E", "L", "R", "S"),
+    ("A", "D", "E", "N", "V", "Z"),
+    ("A", "H", "M", "O", "R", "S"),
+    ("B", "I", "F", "O", "R", "X"),
+    ("D", "E", "N", "O", "S", "W"),
+    ("D", "K", "N", "O", "T", "U"),
+    ("E", "E", "F", "H", "I", "Y"),
+    ("E", "G", "K", "L", "U", "Y"),
+    ("E", "G", "I", "N", "T", "V"),
+    ("E", "H", "I", "N", "P", "S"),
+    ("E", "L", "P", "S", "T", "U"),
+    ("G", "I", "L", "R", "U", "W"),
 ]
 NEW_TILES = [
-    ["A", "A", "E", "E", "G", "N"],
-    ["A", "B", "B", "J", "O", "O"],
-    ["A", "C", "H", "O", "P", "S"],
-    ["A", "F", "F", "K", "P", "S"],
-    ["A", "O", "O", "T", "T", "W"],
-    ["C", "I", "M", "O", "T", "U"],
-    ["D", "E", "I", "L", "R", "X"],
-    ["D", "E", "L", "R", "V", "Y"],
-    ["D", "I", "S", "T", "T", "Y"],
-    ["E", "E", "G", "H", "N", "W"],
-    ["E", "E", "I", "N", "S", "U"],
-    ["E", "H", "R", "T", "V", "W"],
-    ["E", "I", "O", "S", "S", "T"],
-    ["E", "L", "R", "T", "T", "Y"],
-    ["H", "I", "M", "N", "U", "Qu"],
-    ["H", "L", "N", "N", "R", "Z"],
+    ("A", "A", "E", "E", "G", "N"),
+    ("A", "B", "B", "J", "O", "O"),
+    ("A", "C", "H", "O", "P", "S"),
+    ("A", "F", "F", "K", "P", "S"),
+    ("A", "O", "O", "T", "T", "W"),
+    ("C", "I", "M", "O", "T", "U"),
+    ("D", "E", "I", "L", "R", "X"),
+    ("D", "E", "L", "R", "V", "Y"),
+    ("D", "I", "S", "T", "T", "Y"),
+    ("E", "E", "G", "H", "N", "W"),
+    ("E", "E", "I", "N", "S", "U"),
+    ("E", "H", "R", "T", "V", "W"),
+    ("E", "I", "O", "S", "S", "T"),
+    ("E", "L", "R", "T", "T", "Y"),
+    ("H", "I", "M", "N", "U", "Qu"),
+    ("H", "L", "N", "N", "R", "Z"),
 ]
 
 
+@dataclass(frozen=True)
 class Dice:
-    def __init__(self, tile: List[str]) -> None:
-        self.face: str = random.choice(tile)
-        self._hash = sum(sum(ord(char) for char in face) for face in tile)
+    """
+    An object that represents a single physical dice
+    on a physical Boggle board.
+    """
+    faces: Tuple[str]
 
-    def __hash__(self) -> int:
-        return self._hash
-
-    def __str__(self) -> str:
-        return self.face
-
-    def __repr__(self) -> str:
-        return f"Dice {self.face}"
+    @cached_property
+    def face(self):
+        return random.choice(self.faces)
 
 
 class BoggleBoard:
