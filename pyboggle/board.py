@@ -73,11 +73,11 @@ class BoggleBoard:
             self.tiles = NEW_TILES
         else:
             raise ValueError(f"Invalid tile set {tiles}.")
-        self.dice: List[List[Dice]] = self.create_dice()
-        self.adjacency = self.create_adjacency_graph()
+        self.dice: List[List[Dice]] = self._create_dice()
+        self.adjacency = self._create_adjacency_graph()
         self.word_tree = WordTree("pyboggle/word_lists/csw15.txt")
 
-    def create_dice(self) -> List[List[Dice]]:
+    def _create_dice(self) -> List[List[Dice]]:
         """
         Randomly creates 4x4 Dice based on a chosen tileset.
 
@@ -94,12 +94,7 @@ class BoggleBoard:
             dice.append(dice_row)
         return dice
 
-    def print(self):
-        """Prints board in a human readable representation"""
-        for dice_row in self.dice:
-            print(" ".join(str(dice).ljust(2) for dice in dice_row))
-
-    def create_adjacency_graph(self) -> Graph:
+    def _create_adjacency_graph(self) -> Graph:
         """
         Generates an internal adjacency graph to record positions of Dice.
 
@@ -123,28 +118,6 @@ class BoggleBoard:
                     if dice != adj_dice:
                         graph.add_edge(dice, adj_dice)
         return graph
-
-    def solver(self) -> Set[str]:
-        """
-        Get list of all words that exist in board.
-
-        Returns:
-            Set[str]: Set of all valid words in board.
-        """
-        words: Set[str] = set()
-        dice = itertools.chain(*self.dice)
-        combinations = itertools.combinations(dice, 2)
-        for dice1, dice2 in combinations:
-            paths = self._all_simple_paths_graph(dice1, dice2)
-            reversed_paths = self._all_simple_paths_graph(dice2, dice1)
-            all_paths = itertools.chain(paths, reversed_paths)
-            for path in all_paths:
-                if path:
-                    if self.word_tree.exists(
-                        word := "".join(dice.face for dice in path)
-                    ):
-                        words.add(word)
-        return words
 
     def _all_simple_paths_graph(self, source: Dice, target: Dice):
         """
@@ -196,6 +169,33 @@ class BoggleBoard:
                     yield list(visited) + [target]
                 stack.pop()
                 visited.popitem()
+
+    def print(self):
+        """Prints board in a human readable representation"""
+        for dice_row in self.dice:
+            print(" ".join(str(dice).ljust(2) for dice in dice_row))
+
+    def solver(self) -> Set[str]:
+        """
+        Get list of all words that exist in board.
+
+        Returns:
+            Set[str]: Set of all valid words in board.
+        """
+        words: Set[str] = set()
+        dice = itertools.chain(*self.dice)
+        combinations = itertools.combinations(dice, 2)
+        for dice1, dice2 in combinations:
+            paths = self._all_simple_paths_graph(dice1, dice2)
+            reversed_paths = self._all_simple_paths_graph(dice2, dice1)
+            all_paths = itertools.chain(paths, reversed_paths)
+            for path in all_paths:
+                if path:
+                    if self.word_tree.exists(
+                        word := "".join(dice.face for dice in path)
+                    ):
+                        words.add(word)
+        return words
 
 
 if __name__ == "main":
