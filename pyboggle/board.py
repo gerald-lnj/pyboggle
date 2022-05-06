@@ -1,11 +1,8 @@
 import itertools
 import random
-from pprint import pprint
-from typing import Iterable, List, Set
+from typing import List, Optional
 
-import matplotlib.pyplot as plt
-from networkx import Graph, all_simple_paths, draw_networkx, shortest_path
-from networkx.algorithms.traversal import dfs_edges
+from networkx import Graph
 from words import WordTree
 
 CLASSIC_TILES = [
@@ -113,44 +110,44 @@ class BoggleBoard:
         Get list of all words that exist in board.
         """
         words = set()
-        for y, cell_row in enumerate(self.cells):
-            for x, cell in enumerate(cell_row):
-                self.solve_cell(cell)
-
-    def solve_cell(self, cell: Cell, source: int = 0, visited_cells: Set[Cell] = set()):
-        print(f"\ntesting {[str(i) for i in visited_cells] + [str(cell)]}")
-        # print(f"visited: {visited_cells}")
-        if self.word_tree.tree.out_degree(source) == 0:
-            # leaf encountered, valid word
-            print(shortest_path(self.word_tree.tree, 0, source))
-
-        successor_nodes: Iterable[int] = self.word_tree.tree.successors(source)
-        cell_node = next(
-            (
-                node
-                for node in successor_nodes
-                if a.word_tree.tree.nodes[node]["source"] == cell.face
-            ),
-            None,
-        )
-        if cell_node is not None:
-            visited_cells.add(cell)
-            adj_cells: Set[Cell] = set(self.adjacency.neighbors(cell))
-            next_cells = adj_cells.difference(visited_cells)
-            for adj_cell in next_cells:
-                self.solve_cell(adj_cell, cell_node, visited_cells)
-        else:
-            print("end encountered")
+        cells = itertools.chain(*self.cells)
+        combinations = itertools.combinations(cells, 2)
+        for cell1, cell2 in combinations:
+            paths = self._all_simple_paths_graph(cell1, cell2)
+            reversed_paths = self._all_simple_paths_graph(cell2, cell1)
+            all_paths = itertools.chain(paths, reversed_paths)
+            for path in all_paths:
+                if path:
+                    if self.word_tree.exists(
+                        word := "".join(cell.face for cell in path)
+                    ):
+                        words.add(word)
+        return words
 
     def _all_simple_paths_graph(self, source: Cell, target: Cell):
+        """
+        A modified version of
+
+        Args:
+            source (Cell): _description_
+            target (Cell): _description_
+
+        Yields:
+            _type_: _description_
+        """
         targets = set([target])
         cutoff = len(self.adjacency) - 1
         visited = dict.fromkeys([source])
         stack = [iter(self.adjacency[source])]
         while stack:
-
+            if visited_word := "".join(cell.face for cell in visited.keys()):
+                if self.word_tree.search_path(visited_word) is None:
+                    # early exit this path if not valid in self.word_tree.tree
+                    stack.pop()
+                    visited.popitem()
+                    continue
             children = stack[-1]
-            child = next(children, None)
+            child: Optional[Cell] = next(children, None)
             if child is None:
                 stack.pop()
                 visited.popitem()
@@ -158,7 +155,8 @@ class BoggleBoard:
                 if child in visited:
                     continue
                 if child in targets:
-                    yield list(visited) + [child]
+                    if self.word_tree.search_path(visited_word + child.face):
+                        yield list(visited) + [child]
                 visited[child] = None
                 if targets - set(visited.keys()):  # expand stack until find all targets
                     stack.append(iter(self.adjacency[child]))
@@ -175,9 +173,4 @@ class BoggleBoard:
 
 if __name__ == "main":
     a = BoggleBoard()
-    a.test()
-    pprint(list(dfs_edges(a.adjacency)))
-    draw_networkx(G=a.adjacency)
-    all_simple_paths(a.adjacency, a.cells[0][0], a.cells[3][3])
-    plt.show()
-    list(a._all_simple_paths_graph(a.cells[0][0], a.cells[3][3]))
+    a.solver()
