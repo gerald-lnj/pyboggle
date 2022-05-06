@@ -51,14 +51,21 @@ class Dice:
     An object that represents a single physical dice
     on a physical Boggle board.
     """
+
     faces: Tuple[str]
 
     @cached_property
     def face(self):
+        """Exploit cached property to always reuse the first randomly chosen face."""
         return random.choice(self.faces)
 
 
 class BoggleBoard:
+    """
+    An object that represents a physical Boggle board, of size 4 x 4.
+    Each dice/tile/dice (the chosen term is dice) is represented by a Dice object.
+    """
+
     def __init__(self, tiles: str = "classic") -> None:
         if tiles == "classic":
             self.tiles = CLASSIC_TILES
@@ -71,6 +78,12 @@ class BoggleBoard:
         self.word_tree = WordTree("pyboggle/word_lists/csw15.txt")
 
     def create_dice(self) -> List[List[Dice]]:
+        """
+        Randomly creates 4x4 Dice based on a chosen tileset.
+
+        Returns:
+            List[List[Dice]]: 2D list of Dice
+        """
         random.shuffle(self.tiles)
         dice = []
         for i in range(4):
@@ -82,10 +95,18 @@ class BoggleBoard:
         return dice
 
     def print(self):
+        """Prints board in a human readable representation"""
         for dice_row in self.dice:
             print(" ".join(str(dice).ljust(2) for dice in dice_row))
 
-    def create_adjacency_graph(self):
+    def create_adjacency_graph(self) -> Graph:
+        """
+        Generates an internal adjacency graph to record positions of Dice.
+
+        Returns:
+            Graph: Undirected graph which contains information of Dice positions.
+                Each node label is a Dice object, with no node attributes.
+        """
         graph = Graph()
         for y, dice_row in enumerate(self.dice):
             for x, dice in enumerate(dice_row):
@@ -103,11 +124,14 @@ class BoggleBoard:
                         graph.add_edge(dice, adj_dice)
         return graph
 
-    def solver(self):
+    def solver(self) -> Set[str]:
         """
         Get list of all words that exist in board.
+
+        Returns:
+            Set[str]: Set of all valid words in board.
         """
-        words = set()
+        words: Set[str] = set()
         dice = itertools.chain(*self.dice)
         combinations = itertools.combinations(dice, 2)
         for dice1, dice2 in combinations:
@@ -124,20 +148,25 @@ class BoggleBoard:
 
     def _all_simple_paths_graph(self, source: Dice, target: Dice):
         """
-        A modified version of
+        A modified version of networkx.algorithms._all_simple_paths_graph.
+        Carries out all path traversals similar to the original, but early
+        exits when an invalid path according to word.WordTree.tree is encountered.
 
         Args:
             source (Dice): A Dice object in self.adjacency
             target (Dice): A Dice object in self.adjacency
 
         Yields:
-            _type_: _description_
+            List[Dice]: A list of Dice objects forming a path.
+                This will be a valid path, but may not be a valid word.
         """
+        # modification 1: accept a single target directly
         targets = set([target])
         cutoff = len(self.adjacency) - 1
         visited = dict.fromkeys([source])
         stack = [iter(self.adjacency[source])]
         while stack:
+            # modification 2: add early exit check for path traversal
             if visited_word := "".join(dice.face for dice in visited.keys()):
                 if self.word_tree.search_path(visited_word) is None:
                     # early exit this path if not valid in self.word_tree.tree
