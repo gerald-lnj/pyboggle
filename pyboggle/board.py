@@ -43,10 +43,9 @@ NEW_TILES = [
 ]
 
 
-class Cell:
+class Dice:
     def __init__(self, tile: List[str]) -> None:
         self.face: str = random.choice(tile)
-        self.adjacent: List[Cell] = []
         self._hash = sum(sum(ord(char) for char in face) for face in tile)
 
     def __hash__(self) -> int:
@@ -56,7 +55,7 @@ class Cell:
         return self.face
 
     def __repr__(self) -> str:
-        return f"Cell {self.face}"
+        return f"Dice {self.face}"
 
 
 class BoggleBoard:
@@ -67,30 +66,29 @@ class BoggleBoard:
             self.tiles = NEW_TILES
         else:
             raise ValueError(f"Invalid tile set {tiles}.")
-        self.cells: List[List[Cell]] = self.create_cells()
+        self.dice: List[List[Dice]] = self.create_dice()
         self.adjacency = self.create_adjacency_graph()
         self.word_tree = WordTree("pyboggle/word_lists/csw15.txt")
 
-    def create_cells(self):
+    def create_dice(self) -> List[List[Dice]]:
         random.shuffle(self.tiles)
-        cells = []
+        dice = []
         for i in range(4):
-            cell_row = []
+            dice_row = []
             for j in range(4):
                 tile = self.tiles[(i * 4) + j]
-                cell_row.append(Cell(tile))
-            cells.append(cell_row)
-        # self._set_adjacent_cells(cells)
-        return cells
+                dice_row.append(Dice(tile))
+            dice.append(dice_row)
+        return dice
 
     def print(self):
-        for cell_row in self.cells:
-            print(" ".join(str(cell).ljust(2) for cell in cell_row))
+        for dice_row in self.dice:
+            print(" ".join(str(dice).ljust(2) for dice in dice_row))
 
     def create_adjacency_graph(self):
         graph = Graph()
-        for y, cell_row in enumerate(self.cells):
-            for x, cell in enumerate(cell_row):
+        for y, dice_row in enumerate(self.dice):
+            for x, dice in enumerate(dice_row):
                 idx_adjustments = (-1, 0, 1)
                 adjustments = list(itertools.product(idx_adjustments, idx_adjustments))
                 adjusted_idxs = set((x + i, y + j) for i, j in adjustments)
@@ -98,11 +96,11 @@ class BoggleBoard:
                     if adjusted_y < 0 or adjusted_x < 0:
                         continue
                     try:
-                        adj_cell = self.cells[adjusted_y][adjusted_x]
+                        adj_dice = self.dice[adjusted_y][adjusted_x]
                     except IndexError:
                         continue
-                    if cell != adj_cell:
-                        graph.add_edge(cell, adj_cell)
+                    if dice != adj_dice:
+                        graph.add_edge(dice, adj_dice)
         return graph
 
     def solver(self):
@@ -110,27 +108,27 @@ class BoggleBoard:
         Get list of all words that exist in board.
         """
         words = set()
-        cells = itertools.chain(*self.cells)
-        combinations = itertools.combinations(cells, 2)
-        for cell1, cell2 in combinations:
-            paths = self._all_simple_paths_graph(cell1, cell2)
-            reversed_paths = self._all_simple_paths_graph(cell2, cell1)
+        dice = itertools.chain(*self.dice)
+        combinations = itertools.combinations(dice, 2)
+        for dice1, dice2 in combinations:
+            paths = self._all_simple_paths_graph(dice1, dice2)
+            reversed_paths = self._all_simple_paths_graph(dice2, dice1)
             all_paths = itertools.chain(paths, reversed_paths)
             for path in all_paths:
                 if path:
                     if self.word_tree.exists(
-                        word := "".join(cell.face for cell in path)
+                        word := "".join(dice.face for dice in path)
                     ):
                         words.add(word)
         return words
 
-    def _all_simple_paths_graph(self, source: Cell, target: Cell):
+    def _all_simple_paths_graph(self, source: Dice, target: Dice):
         """
         A modified version of
 
         Args:
-            source (Cell): _description_
-            target (Cell): _description_
+            source (Dice): A Dice object in self.adjacency
+            target (Dice): A Dice object in self.adjacency
 
         Yields:
             _type_: _description_
@@ -140,14 +138,14 @@ class BoggleBoard:
         visited = dict.fromkeys([source])
         stack = [iter(self.adjacency[source])]
         while stack:
-            if visited_word := "".join(cell.face for cell in visited.keys()):
+            if visited_word := "".join(dice.face for dice in visited.keys()):
                 if self.word_tree.search_path(visited_word) is None:
                     # early exit this path if not valid in self.word_tree.tree
                     stack.pop()
                     visited.popitem()
                     continue
             children = stack[-1]
-            child: Optional[Cell] = next(children, None)
+            child: Optional[Dice] = next(children, None)
             if child is None:
                 stack.pop()
                 visited.popitem()
