@@ -2,9 +2,9 @@ import itertools
 import random
 from dataclasses import dataclass
 from functools import cached_property
-from typing import List, Optional, Set, Tuple
+from typing import List, Optional, Set, Tuple, Union
 
-from networkx import Graph
+from networkx import Graph, is_simple_path
 from words import WordTree
 
 CLASSIC_TILES = [
@@ -170,10 +170,29 @@ class BoggleBoard:
                 stack.pop()
                 visited.popitem()
 
+    def _is_valid_path(self, word: str) -> bool:
+        """
+        Given a word, make a generator of all possible dice paths that can make that word,
+        and check if any of those paths are valid in self.adjacency.
+
+        Args:
+            word (str): Word to check.
+
+        Returns:
+            bool: Whether word is a valid path or not
+        """
+        all_dice = list(itertools.chain(*self.dice))
+        # for each char, a generator of dice which has the correct face
+        matching_dice = [
+            [dice for dice in all_dice if dice.face == char] for char in word
+        ]
+        path_permutations = list(itertools.product(*matching_dice))
+        return any(is_simple_path(self.adjacency, path) for path in path_permutations)
+
     def print(self):
         """Prints board in a human readable representation"""
-        for dice_row in self.dice:
-            print(" ".join(str(dice).ljust(2) for dice in dice_row))
+        for dice_row in a.dice:
+            print(" ".join(dice.face.ljust(2) for dice in dice_row))
 
     def solver(self) -> Set[str]:
         """
@@ -195,7 +214,36 @@ class BoggleBoard:
                         word := "".join(dice.face for dice in path)
                     ):
                         words.add(word)
+        print(f"All possible words: {sorted(words)}")
+        print(f"Board score: {self.scorer(words)}")
         return words
+
+    def scorer(self, words: Union[Set[str], str]):
+        """
+        Get score of word(s) as int. Assumes valid word.
+        """
+        if type(words) is str:
+            words = set([words])
+        scoring = {
+            3: 1,
+            4: 1,
+            5: 2,
+            6: 3,
+            7: 5,
+            8: 11,
+        }
+        total_points = 0
+        for word in words:
+            assert (length := len(word)) >= 3, "Words must be at least 3 letters."
+            length = min(8, length)
+            total_points += scoring[length]
+        return total_points
+
+    def attempt_word(self, word: str) -> Optional[int]:
+        """Check if word is possible in board, and exists in word list"""
+        if self._is_valid_path(word) and self.word_tree.exists(word):
+            return self.scorer(word)
+
 
 
 if __name__ == "main":
